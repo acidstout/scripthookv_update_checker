@@ -33,7 +33,7 @@ Function LogWrite {
 	If ($QuietMode -eq $false) {
 		Write-Output "$logstring`r`n"
 	} else {
-		$Timestamp = (Get-Date).ToString('yyyy-MM-dd hh:mm:ss')
+		$Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 		Add-content $scriptLog -value ("[" + $Timestamp + "] " + $logstring)
 	}
 }
