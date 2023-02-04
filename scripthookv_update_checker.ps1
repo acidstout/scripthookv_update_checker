@@ -5,7 +5,7 @@
 # Does NOT work on PowerShell 1.0.
 #
 # @author: nrekow
-# @version: 1.0
+# @version: 1.1
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -90,19 +90,22 @@ If ($QuietMode -eq $false) {
 
 If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 	# Installed ScriptHookV version is older than game version.
-	LogWrite "ScriptHookV is outdated."
+	LogWrite "ScriptHookV is outdated or not installed."
 	
-	Try {
-		# Delete old ScriptHookV plugin
-		Remove-Item ($Game_Folder + '\ScriptHookV.dll') -Force
-	} Catch {
-		LogWrite "Could not delete outdated ScriptHookV plugin. You should remove it manually."
-		Exit
+	# Check if outdated ScriptHookV plugin needs to be deleted from game folder.
+	if ([System.IO.File]::Exists($Game_Folder + '\ScriptHookV.dll')) {
+		Try {
+			# Delete outdated ScriptHookV plugin.
+			Remove-Item ($Game_Folder + '\ScriptHookV.dll') -Force
+		} Catch {
+			LogWrite "Could not delete outdated ScriptHookV plugin. You should remove it manually."
+			Exit
+		}
 	}
 	
 	If ([System.Version]$ScriptHookV_Remote_Version -ge [System.Version]$Game_Version) {
 		# Remote version is newer or equal than game version.
-		LogWrite "Downloading new version ..."
+		LogWrite "Downloading latest version ..."
 		
 		$ScriptHookV_Download_URL =	$ScriptHookV_Download_URL.Replace('<VERSION>', $ScriptHookV_Remote_Version)
 		$Destination_File = ($Game_Folder + '\' + $(Split-Path -Path $ScriptHookV_Download_URL -Leaf))

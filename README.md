@@ -25,3 +25,6 @@ pwsh scripthookv_update_checker.ps1
 ```
 
 You will likely need to add the proper paths to the command, but basically it's just that. Save the task and you're good to go. Please don't hammer Alexander's website by constantly checking for a new version. Once per day is more than enough.
+
+## Known issues
+Since the game is updated automatically by the Rockstar Launcher only when you start the game, the ScriptHookV Update Checker is not able to notice these updates unless you run it directly after the Launcher updated the game and prior you start the actual game. There's no way for this script to work around this issue, and permanently monitoring file system changes in the game's folder is not cool. A different solution is if Alexander Blade adds automatic update capability to his plugin if it is outdated. So, instead of showing a message that the plugin is outdated and then quitting the game, he could make the plugin to check for an update, and if none is available, yet, then just load the game without hooking to the game. From my perspective this is the best solution. Unfortunately, the source code of his plugin is not open source, so I cannot implement it myself. What a shame!
