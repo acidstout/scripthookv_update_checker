@@ -1,15 +1,14 @@
 #
 # ScriptHookV Update Checker for Grand Theft Auto V
 #
-# Successfully tested on PowerShell 7.
-# Does NOT work on PowerShell 1.0.
+# Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.1
+# @version: 1.2
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
-$ErrorActionPreference = "Stop"
+# $ErrorActionPreference = "Stop"
 
 # If TRUE no output will be printed. Instead errors will be logged into a file.
 $QuietMode = $true
@@ -22,6 +21,8 @@ $Fallback_ScriptHookV_Version = '0.0'
 $scriptName = (Get-Item $PSCommandPath).Basename
 $scriptLog = "$PSScriptRoot\$scriptName.log"
 
+Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
+Add-Type -Assembly System.IO.Compression.FileSystem
 
 # Either write into the console or into the log file,
 # depending on the $QuietMode setting.
@@ -50,12 +51,22 @@ Try {
 # Set ScriptHookV URLs.
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
+$userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+$headers = @{
+	'Referer' = $ScriptHookV_URL
+	'User-Agent' = $userAgent
+}
 
 # Get installed ScriptHookV version.
-Try {
-	$ScriptHookV_Version = (Get-Item ($Game_Folder + '\ScriptHookV.dll')).VersionInfo.FileVersion
-} Catch {
-	# ScriptHookV plugin is not installed.
+If ([System.IO.File]::Exists($Game_Folder + '\ScriptHookV.dll')) {
+	Try {
+		$ScriptHookV_Version = (Get-Item ($Game_Folder + '\ScriptHookV.dll')).VersionInfo.FileVersion
+	} Catch {
+		# ScriptHookV plugin is not installed.
+		LogWrite 'Could not read version from ScriptHookV.dll file. Using fallback version.'
+		$ScriptHookV_Version = $Fallback_ScriptHookV_Version
+	}
+} Else {
 	$ScriptHookV_Version = $Fallback_ScriptHookV_Version
 }
 
@@ -69,7 +80,7 @@ Try {
 
 # Get ScriptHookV version from website.
 Try {
-	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL
+	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $headers -SessionVariable shv_session
 	$HTML = New-Object -Com "HTMLFile"
 	[string]$htmlBody = $req.Content
 	$HTML.write([ref]$htmlBody) # This is throws an error in PowerShell 1.0.
@@ -105,40 +116,58 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 	
 	If ([System.Version]$ScriptHookV_Remote_Version -ge [System.Version]$Game_Version) {
 		# Remote version is newer or equal than game version.
-		LogWrite "Downloading latest version ..."
-		
 		$ScriptHookV_Download_URL =	$ScriptHookV_Download_URL.Replace('<VERSION>', $ScriptHookV_Remote_Version)
 		$Destination_File = ($Game_Folder + '\' + $(Split-Path -Path $ScriptHookV_Download_URL -Leaf))
-		
-		Try {
-			# Download new ScriptHookV zip-file.
-			Invoke-WebRequest $ScriptHookV_Download_URL -Headers @{"Referrer"=$ScriptHookV_URL} -OutFile $Destination_File
-		} Catch {
-			LogWrite "Could not download latest version from website $ScriptHookV_Download_URL."
-			Exit
+
+		# Check if Zip file has already been downloaded.
+		If (-not([System.IO.File]::Exists($($Destination_File)))) {
+			LogWrite "Downloading latest version ..."
+			Try {
+				# Download new ScriptHookV Zip file.
+				$resp = Invoke-WebRequest -Method GET -Uri $ScriptHookV_Download_URL -Headers $headers -OutFile $($Destination_File) -WebSession $shv_session
+				$statusCode = $resp.StatusCode
+			} Catch {
+				$statusCode = [int]$_.Exception.Response.StatusCode
+				LogWrite "Error $($statusCode) : Could not download latest version from website $ScriptHookV_Download_URL."
+			}
+		} Else {
+			LogWrite "Destination file already exists. Skipping download."
 		}
 		
 		# Unzip the DLL from the downloaded file into the game's folder.
-		LogWrite "Unpacking new version ..."
-		
-		Try {
-			Add-Type -Assembly System.IO.Compression.FileSystem
+		If ([System.IO.File]::Exists($($Destination_File))) {
+			LogWrite "Unpacking new version ..."
 			$zip = [IO.Compression.ZipFile]::OpenRead($Destination_File)
-			$zip.Entries | where {$_.Name -like 'ScriptHookV.dll'} | foreach {[System.IO.Compression.ZipFileExtensions]::ExtractToFile($_, $Game_Folder, $true)}
-			$zip.Dispose()
-		} Catch {
-			LogWrite "Could not unpack ScriptHookV plugin into game folder."
-			Exit
+			Try {
+				# Find specific file in Zip archive.
+				If ($foundFile = $zip.Entries.Where({ $_.Name -eq 'ScriptHookV.dll' }, 'First')) {
+					# Set destination path of file to extract
+					$destinationFile = Join-Path $Game_Folder $foundFile.Name
+					
+					# Extract the file.
+					[IO.Compression.ZipFileExtensions]::ExtractToFile($foundFile[0], $destinationFile)
+				} Else {
+					LogWrite "Zip file does not seem to contain ScriptHookV.dll."
+				}
+			} Finally {
+				# Close the Zip so the file will be unlocked again.
+				If ($zip) {
+					$zip.Dispose()
+				}
+			}
+			
+			Try {
+				# Delete zip file after unpacking DLL.
+				Remove-Item $Destination_File -Force
+			} Catch {
+				LogWrite "Could not delete downloaded Zip file. You may need to remove it manually."
+			}
+			
+			LogWrite "Done!"
+		} Else {
+			# If download failed for whatever reason and there's also no manually downloaded Zip file in the game's folder.
+			LogWrite "Could not find Zip file to extract."
 		}
-		
-		Try {
-			# Delete zip file after unpacking DLL.
-			Remove-Item $Destination_File -Force
-		} Catch {
-			LogWrite "Could not delete downloaded zip-file. You may need to remove it manually."
-		}
-		
-		LogWrite "Done!"
 	} Else {
 		# If the remote version is older than the game version, then there's no updated plugin, yet.
 		LogWrite "No update available, yet."
