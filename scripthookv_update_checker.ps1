@@ -11,7 +11,7 @@
 # $ErrorActionPreference = "Stop"
 
 # If TRUE no output will be printed. Instead errors will be logged into a file.
-$QuietMode = $true
+$QuietMode = $false
 
 # Define fallback version for cases where ScriptHookV is not installed.
 $Fallback_ScriptHookV_Version = '0.0'
@@ -51,7 +51,7 @@ Try {
 # Set ScriptHookV URLs.
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
-$userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+$userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 $headers = @{
 	'Referer' = $ScriptHookV_URL
 	'User-Agent' = $userAgent
@@ -83,9 +83,15 @@ Try {
 	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $headers -SessionVariable shv_session
 	$HTML = New-Object -Com "HTMLFile"
 	[string]$htmlBody = $req.Content
-	$HTML.write([ref]$htmlBody) # This is throws an error in PowerShell 1.0.
-	$filter = $HTML.getElementById('tfhover')
-	$ScriptHookV_Remote_Version = $filter.innerText.split("`r`n")[1].Replace('Versionv', '')
+
+	[void]($htmlBody -match "\/files\/ScriptHookV_[0-9\.]+\.zip")
+	$link = $matches[0]
+	$ScriptHookV_Remote_Version = $link.Substring(19)
+	$ScriptHookV_Remote_Version = $ScriptHookV_Remote_Version.Substring(0, [int]$ScriptHookV_Remote_Version.IndexOf('.zip'))
+	
+	# $HTML.write([ref]$htmlBody) # This is throws an error in PowerShell 1.0.
+	# $filter = $HTML.getElementById('tfhover')
+	# $ScriptHookV_Remote_Version = $filter.innerText.split("`r`n")[1].Replace('Versionv', '')
 } Catch {
 	LogWrite "Could not fetch latest ScriptHookV plugin version from website $ScriptHookV_URL."
 	Exit
