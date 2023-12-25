@@ -4,14 +4,14 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2
+# @version: 1.2.1
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
 
 # If TRUE no output will be printed. Instead errors will be logged into a file.
-$QuietMode = $false
+$QuietMode = $true
 
 # Define fallback version for cases where ScriptHookV is not installed.
 $Fallback_ScriptHookV_Version = '0.0'
@@ -24,6 +24,7 @@ $scriptLog = "$PSScriptRoot\$scriptName.log"
 Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
 Add-Type -Assembly System.IO.Compression.FileSystem
 
+
 # Either write into the console or into the log file,
 # depending on the $QuietMode setting.
 #
@@ -31,11 +32,11 @@ Add-Type -Assembly System.IO.Compression.FileSystem
 #
 Function LogWrite {
 	Param ([string]$logstring)
-	If ($QuietMode -eq $false) {
+	If ($script:$QuietMode -eq $false) {
 		Write-Output "$logstring`r`n"
 	} else {
 		$Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-		Add-content $scriptLog -value ("[" + $Timestamp + "] " + $logstring)
+		Add-content $script:$scriptLog -value ("[" + $Timestamp + "] " + $logstring)
 	}
 }
 
@@ -88,10 +89,6 @@ Try {
 	$link = $matches[0]
 	$ScriptHookV_Remote_Version = $link.Substring(19)
 	$ScriptHookV_Remote_Version = $ScriptHookV_Remote_Version.Substring(0, [int]$ScriptHookV_Remote_Version.IndexOf('.zip'))
-	
-	# $HTML.write([ref]$htmlBody) # This is throws an error in PowerShell 1.0.
-	# $filter = $HTML.getElementById('tfhover')
-	# $ScriptHookV_Remote_Version = $filter.innerText.split("`r`n")[1].Replace('Versionv', '')
 } Catch {
 	LogWrite "Could not fetch latest ScriptHookV plugin version from website $ScriptHookV_URL."
 	Exit

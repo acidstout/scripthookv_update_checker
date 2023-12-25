@@ -1,4 +1,8 @@
 ##Changelog
+1.2.1
+- Fixed wrong global variable definition
+- Fixed HTML parsing due to changes on the website
+
 1.2
 - Refactored method to extract Zip file.
 - Skip download if Zip file already exists.

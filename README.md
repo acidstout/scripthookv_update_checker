@@ -12,7 +12,7 @@ Checks the installed version of the ScriptHookV plugin against the latest versio
 This script could have been cleaner and nicer from a code perspective, but I wanted a fast, reliable, portable single-file solution without many dependencies. So, the script tries to do as much as possible itself. You should not need to modify it in order to make it work for you, but keep in mind that although it works totally fine for me, it might not work for you at all, or it might even destroy something. So, use this on your own risk.
 
 ## Dependencies
-PowerShell 7. At least it has been tested with that version. It does not run with PowerShell 1.0, which you shouldn't use anyway. It might run with a version PowerShell lower than 7.0, but that hasn't been tested.
+Tested successfully with PowerShell 7. It might run with a version PowerShell lower than 7.0, but that hasn't been tested.
 
 ## Usage
 1. Run the script.
