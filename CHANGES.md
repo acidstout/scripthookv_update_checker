@@ -1,4 +1,8 @@
 ##Changelog
+1.2.3
+- Got rid of fallback version variable
+- Reduced amount of global variables
+
 1.2.2
 - Changed scope of variables.
 - Consistent naming convention

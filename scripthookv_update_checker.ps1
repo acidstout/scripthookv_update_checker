@@ -4,19 +4,11 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.2
+# @version: 1.2.3
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
-
-# Define fallback version for cases where ScriptHookV is not installed.
-$Fallback_ScriptHookV_Version = '0.0'
-
-# Get location and name of current script.
-# Used to create a logfile of the same name.
-$Script_Name = (Get-Item $PSCommandPath).Basename
-$script:Script_Log = "$PSScriptRoot\$Script_Name.log"
 
 # If TRUE no output will be printed. Instead errors will be logged into a file.
 $script:Quiet_Mode = $true
@@ -26,17 +18,23 @@ Add-Type -Assembly System.IO.Compression.FileSystem
 
 
 # Either write into the console or into the log file,
-# depending on the $QuietMode setting.
+# depending on the $Quiet_Mode setting.
 #
 # Param String $logstring
 #
 Function LogWrite {
+	# Get parameter from function call.
 	Param ([string]$Log_String)
+
+	# Get location and name of current script.
+	$Script_Name = (Get-Item $PSCommandPath).Basename
+	$Script_Log = "$PSScriptRoot\$Script_Name.log"
+
 	If ($script:Quiet_Mode -eq $false) {
 		Write-Output "$Log_String`r`n"
 	} else {
 		$Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-		Add-content $script:Script_Log -value ("[" + $Timestamp + "] " + $Log_String)
+		Add-content $Script_Log -value ("[" + $Timestamp + "] " + $Log_String)
 	}
 }
 
@@ -49,7 +47,8 @@ Try {
 	Exit
 }
 
-# Set ScriptHookV URLs.
+# Set ScriptHookV URLs and define fallback version for cases where ScriptHookV is not installed.
+$ScriptHookV_Version = '0.0'
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
 $User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -65,10 +64,8 @@ If ([System.IO.File]::Exists($Game_Folder + '\ScriptHookV.dll')) {
 	} Catch {
 		# ScriptHookV plugin is not installed.
 		LogWrite 'Could not read version from ScriptHookV.dll file. Using fallback version.'
-		$ScriptHookV_Version = $Fallback_ScriptHookV_Version
+		$ScriptHookV_Version = '0.0'
 	}
-} Else {
-	$ScriptHookV_Version = $Fallback_ScriptHookV_Version
 }
 
 # Get installed game version.
@@ -129,6 +126,7 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 				# Download new ScriptHookV Zip file.
 				$resp = Invoke-WebRequest -Method GET -Uri $ScriptHookV_Download_URL -Headers $Headers -OutFile $($Destination_File) -WebSession $SHV_Session
 				$Status_Code = $resp.StatusCode
+				LogWrite "Info $($Status_Code) : Downloaded latest version from website $ScriptHookV_Download_URL."
 			} Catch {
 				$Status_Code = [int]$_.Exception.Response.StatusCode
 				LogWrite "Error $($Status_Code) : Could not download latest version from website $ScriptHookV_Download_URL."
