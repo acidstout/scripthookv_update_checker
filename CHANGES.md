@@ -1,6 +1,10 @@
 ##Changelog
+1.2.2
+- Changed scope of variables.
+- Consistent naming convention
+
 1.2.1
-- Fixed wrong global variable definition
+- Fixed global variable definitions
 - Fixed HTML parsing due to changes on the website
 
 1.2

@@ -4,22 +4,22 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.1
+# @version: 1.2.2
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
-
-# If TRUE no output will be printed. Instead errors will be logged into a file.
-$QuietMode = $true
 
 # Define fallback version for cases where ScriptHookV is not installed.
 $Fallback_ScriptHookV_Version = '0.0'
 
 # Get location and name of current script.
 # Used to create a logfile of the same name.
-$scriptName = (Get-Item $PSCommandPath).Basename
-$scriptLog = "$PSScriptRoot\$scriptName.log"
+$Script_Name = (Get-Item $PSCommandPath).Basename
+$script:Script_Log = "$PSScriptRoot\$Script_Name.log"
+
+# If TRUE no output will be printed. Instead errors will be logged into a file.
+$script:Quiet_Mode = $true
 
 Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
 Add-Type -Assembly System.IO.Compression.FileSystem
@@ -31,12 +31,12 @@ Add-Type -Assembly System.IO.Compression.FileSystem
 # Param String $logstring
 #
 Function LogWrite {
-	Param ([string]$logstring)
-	If ($script:$QuietMode -eq $false) {
-		Write-Output "$logstring`r`n"
+	Param ([string]$Log_String)
+	If ($script:Quiet_Mode -eq $false) {
+		Write-Output "$Log_String`r`n"
 	} else {
 		$Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-		Add-content $script:$scriptLog -value ("[" + $Timestamp + "] " + $logstring)
+		Add-content $script:Script_Log -value ("[" + $Timestamp + "] " + $Log_String)
 	}
 }
 
@@ -52,10 +52,10 @@ Try {
 # Set ScriptHookV URLs.
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
-$userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-$headers = @{
+$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+$Headers = @{
 	'Referer' = $ScriptHookV_URL
-	'User-Agent' = $userAgent
+	'User-Agent' = $User_Agent
 }
 
 # Get installed ScriptHookV version.
@@ -81,13 +81,13 @@ Try {
 
 # Get ScriptHookV version from website.
 Try {
-	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $headers -SessionVariable shv_session
+	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $Headers -SessionVariable SHV_Session
 	$HTML = New-Object -Com "HTMLFile"
-	[string]$htmlBody = $req.Content
+	[string]$HtmlBody = $req.Content
 
-	[void]($htmlBody -match "\/files\/ScriptHookV_[0-9\.]+\.zip")
-	$link = $matches[0]
-	$ScriptHookV_Remote_Version = $link.Substring(19)
+	[void]($HtmlBody -match "\/files\/ScriptHookV_[0-9\.]+\.zip")
+	$Link = $Matches[0]
+	$ScriptHookV_Remote_Version = $Link.Substring(19)
 	$ScriptHookV_Remote_Version = $ScriptHookV_Remote_Version.Substring(0, [int]$ScriptHookV_Remote_Version.IndexOf('.zip'))
 } Catch {
 	LogWrite "Could not fetch latest ScriptHookV plugin version from website $ScriptHookV_URL."
@@ -95,7 +95,7 @@ Try {
 }
 
 # Show version found.
-If ($QuietMode -eq $false) {
+If ($Quiet_Mode -eq $false) {
 	Write-Output "`r`nScriptHookV Update Checker`r`n"
 	Write-Output "Installed game version: $Game_Version"
 	Write-Output "Installed plugin version: $ScriptHookV_Version"
@@ -127,11 +127,11 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			LogWrite "Downloading latest version ..."
 			Try {
 				# Download new ScriptHookV Zip file.
-				$resp = Invoke-WebRequest -Method GET -Uri $ScriptHookV_Download_URL -Headers $headers -OutFile $($Destination_File) -WebSession $shv_session
-				$statusCode = $resp.StatusCode
+				$resp = Invoke-WebRequest -Method GET -Uri $ScriptHookV_Download_URL -Headers $Headers -OutFile $($Destination_File) -WebSession $SHV_Session
+				$Status_Code = $resp.StatusCode
 			} Catch {
-				$statusCode = [int]$_.Exception.Response.StatusCode
-				LogWrite "Error $($statusCode) : Could not download latest version from website $ScriptHookV_Download_URL."
+				$Status_Code = [int]$_.Exception.Response.StatusCode
+				LogWrite "Error $($Status_Code) : Could not download latest version from website $ScriptHookV_Download_URL."
 			}
 		} Else {
 			LogWrite "Destination file already exists. Skipping download."
@@ -143,12 +143,12 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			$zip = [IO.Compression.ZipFile]::OpenRead($Destination_File)
 			Try {
 				# Find specific file in Zip archive.
-				If ($foundFile = $zip.Entries.Where({ $_.Name -eq 'ScriptHookV.dll' }, 'First')) {
+				If ($Found_File = $zip.Entries.Where({ $_.Name -eq 'ScriptHookV.dll' }, 'First')) {
 					# Set destination path of file to extract
-					$destinationFile = Join-Path $Game_Folder $foundFile.Name
+					$Destination_File = Join-Path $Game_Folder $Found_File.Name
 					
 					# Extract the file.
-					[IO.Compression.ZipFileExtensions]::ExtractToFile($foundFile[0], $destinationFile)
+					[IO.Compression.ZipFileExtensions]::ExtractToFile($Found_File[0], $Destination_File)
 				} Else {
 					LogWrite "Zip file does not seem to contain ScriptHookV.dll."
 				}
