@@ -1,4 +1,7 @@
 ##Changelog
+1.2.4
+- Added option to send mail upon successful update.
+
 1.2.3
 - Got rid of fallback version variable
 - Reduced amount of global variables

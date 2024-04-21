@@ -1,4 +1,4 @@
-# Grand Theft Auto V ScriptHookV Update Checker
+# Grand Theft Auto V ScriptHookV Updater
 Checks the installed version of the ScriptHookV plugin against the latest version online, and updates it if necessary.
 
 ## Features
@@ -15,14 +15,15 @@ This script could have been cleaner and nicer from a code perspective, but I wan
 Tested successfully with PowerShell 7. It might run with a version PowerShell lower than 7.0, but that hasn't been tested.
 
 ## Usage
-1. Run the script.
-2. You may want to create a cronjob.
+1. Optionally set up you e-mail configuration in ScriptHookV_Updater_sample.ps1 and rename it to ScriptHookV_Updater_config.ps1
+2. Run the script.
+3. You may want to create a cronjob.
 
 ## Cronjob
 Use Windows' Task Scheduler and create a new task running once per day (preferably at night), and let it run this command:
 
 ```
-pwsh scripthookv_update_checker.ps1
+pwsh ScriptHookV_Updater.ps1
 ```
 
 You will likely need to add the proper paths to the command, but basically it's just that. Save the task and you're good to go. Please don't hammer Alexander's website by constantly checking for a new version. Once per day is more than enough.

@@ -1,24 +1,33 @@
 #
-# ScriptHookV Update Checker for Grand Theft Auto V
+# ScriptHookV Updater for Grand Theft Auto V
 #
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.3
+# @version: 1.2.4
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
 
 # If TRUE no output will be printed. Instead errors will be logged into a file.
-$script:Quiet_Mode = $true
+$script:QuietMode = $true
+
+# Check if mail server configuration exists and load it.
+$ConfigFile = "$PSScriptRoot\$(Get-Item $PSCommandPath).Basename)_config.ps1"
+If ([System.IO.File]::Exists($ConfigFile)) {
+	. $ConfigFile
+} Else {
+	# Do not try to send mails upon success.
+	$script:UseMail = $false
+}
 
 Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
 Add-Type -Assembly System.IO.Compression.FileSystem
 
 
 # Either write into the console or into the log file,
-# depending on the $Quiet_Mode setting.
+# depending on the $QuietMode setting.
 #
 # Param String $logstring
 #
@@ -30,12 +39,31 @@ Function LogWrite {
 	$Script_Name = (Get-Item $PSCommandPath).Basename
 	$Script_Log = "$PSScriptRoot\$Script_Name.log"
 
-	If ($script:Quiet_Mode -eq $false) {
+	If ($script:QuietMode -eq $false) {
 		Write-Output "$Log_String`r`n"
 	} else {
 		$Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 		Add-content $Script_Log -value ("[" + $Timestamp + "] " + $Log_String)
 	}
+}
+
+
+# Send a mail upon successful update.
+#
+# Param String $version
+#
+Function Send-ToEmail([string]$version) {
+    $message = New-Object Net.Mail.MailMessage
+    $message.From = "ScriptHookV Updater <$script:MailUsername>"
+    $message.To.Add($script:MailRecipient)
+    $message.Subject = "ScriptHookV Updater"
+    $message.Body = "Latest ScriptHookV $version has been successfully installed. You can now use all scripts and plugins in GTA V again."
+ 
+    $smtp = new-object Net.Mail.SmtpClient($script:MailServer, $script:MailPort)
+    $smtp.EnableSSL = $true
+    $smtp.Credentials = New-Object System.Net.NetworkCredential($script:MailUsername, $script:MailPassword)
+    $smtp.send($message)
+    LogWrite "Mail sent." 
 }
 
 
@@ -92,7 +120,7 @@ Try {
 }
 
 # Show version found.
-If ($Quiet_Mode -eq $false) {
+If ($script:QuietMode -eq $false) {
 	Write-Output "`r`nScriptHookV Update Checker`r`n"
 	Write-Output "Installed game version: $Game_Version"
 	Write-Output "Installed plugin version: $ScriptHookV_Version"
@@ -162,6 +190,15 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 				Remove-Item $Destination_File -Force
 			} Catch {
 				LogWrite "Could not delete downloaded Zip file. You may need to remove it manually."
+			}
+			
+			If ($script:UseMail -eq $true) {
+				Try {
+					# Send mail to inform about latest update.
+					Send-ToEmail -version $ScriptHookV_Remote_Version
+				} Catch {
+					LogWrite "Could not send mail about update."
+				}
 			}
 			
 			LogWrite "Done!"
