@@ -4,7 +4,7 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4
+# @version: 1.2.4.1
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -14,17 +14,17 @@
 $script:QuietMode = $true
 
 # Check if mail server configuration exists and load it.
-$ConfigFile = "$PSScriptRoot\$(Get-Item $PSCommandPath).Basename)_config.ps1"
+$ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
 If ([System.IO.File]::Exists($ConfigFile)) {
 	. $ConfigFile
 } Else {
 	# Do not try to send mails upon success.
 	$script:UseMail = $false
+	$script:NotifyURL = $false
 }
 
 Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
 Add-Type -Assembly System.IO.Compression.FileSystem
-
 
 # Either write into the console or into the log file,
 # depending on the $QuietMode setting.
@@ -154,10 +154,10 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 				# Download new ScriptHookV Zip file.
 				$resp = Invoke-WebRequest -Method GET -Uri $ScriptHookV_Download_URL -Headers $Headers -OutFile $($Destination_File) -WebSession $SHV_Session
 				$Status_Code = $resp.StatusCode
-				LogWrite "Info $($Status_Code) : Downloaded latest version from website $ScriptHookV_Download_URL."
+				LogWrite "Info $($Status_Code): Downloaded latest version from website $ScriptHookV_Download_URL."
 			} Catch {
 				$Status_Code = [int]$_.Exception.Response.StatusCode
-				LogWrite "Error $($Status_Code) : Could not download latest version from website $ScriptHookV_Download_URL."
+				LogWrite "Error $($Status_Code): Could not download latest version from website $ScriptHookV_Download_URL."
 			}
 		} Else {
 			LogWrite "Destination file already exists. Skipping download."
@@ -198,6 +198,17 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 					Send-ToEmail -version $ScriptHookV_Remote_Version
 				} Catch {
 					LogWrite "Could not send mail about update."
+				}
+			}
+			
+			if ($script:NotifyURL -ne $false) {
+				Try {
+					$payload = "Latest ScriptHookV $ScriptHookV_Remote_Version has been successfully installed."
+					$resp = Invoke-WebRequest -Method POST -Uri $script:NotifyURL -Body $payload
+					$Status_Code = $resp.StatusCode
+					LogWrite "Info $($Status_Code): Sent notfication."
+				} Catch {
+					LogWrite "Could not reach $script:NotifyURL"
 				}
 			}
 			

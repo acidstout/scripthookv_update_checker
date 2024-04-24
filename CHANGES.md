@@ -1,4 +1,7 @@
 ##Changelog
+1.2.4.1
+- Added support for ntfy.sh to send push messages upon successful update.
+
 1.2.4
 - Added option to send mail upon successful update.
 
