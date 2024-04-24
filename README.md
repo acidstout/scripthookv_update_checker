@@ -7,6 +7,7 @@ Checks the installed version of the ScriptHookV plugin against the latest versio
 - Deletes old plugin if GTA has been updated, but the plugin has not yet been updated in order to not break GTA.
 - Logs to file by default.
 - Skips download if Zip file has been downloaded manually into game's folder.
+- Tries to get elevated access rights, because the GTA V folder is restricted by default.
 
 ## Disclaimer
 This script could have been cleaner and nicer from a code perspective, but I wanted a fast, reliable, portable single-file solution without many dependencies. So, the script tries to do as much as possible itself. You should not need to modify it in order to make it work for you, but keep in mind that although it works totally fine for me, it might not work for you at all, or it might even destroy something. So, use this on your own risk.

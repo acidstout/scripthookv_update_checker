@@ -4,14 +4,30 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.1
+# @version: 1.2.4.2
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
 
+param([switch]$elevated)
+
 # If TRUE no output will be printed. Instead errors will be logged into a file.
 $script:QuietMode = $true
+
+# Change folder to game directory, because elevation changes folder to C:\Windows\System32 by default, which we don't want.
+Set-Location -LiteralPath $PSScriptRoot
+
+# Check if we have elevated access rights.
+If ((Test-Admin) -eq $false)  {
+    If ($elevated) {
+        # Tried to elevate, did not work, aborting.
+		LogWrite "Could not elevate access rights."
+    } Else {
+        Start-Process powershell.exe -WindowStyle hidden -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+    }
+    Exit
+}
 
 # Check if mail server configuration exists and load it.
 $ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
@@ -25,6 +41,17 @@ If ([System.IO.File]::Exists($ConfigFile)) {
 
 Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
 Add-Type -Assembly System.IO.Compression.FileSystem
+
+
+# Check if we have elevated access rights.
+#
+# Return boolean
+#
+Function Test-Admin {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
 
 # Either write into the console or into the log file,
 # depending on the $QuietMode setting.
@@ -79,7 +106,7 @@ Try {
 $ScriptHookV_Version = '0.0'
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
-$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 $Headers = @{
 	'Referer' = $ScriptHookV_URL
 	'User-Agent' = $User_Agent
@@ -106,7 +133,8 @@ Try {
 
 # Get ScriptHookV version from website.
 Try {
-	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $Headers -SessionVariable SHV_Session
+	$SHV_Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+	$req = Invoke-WebRequest -Method GET -Uri $ScriptHookV_URL -Headers $Headers -SessionVariable $SHV_Session
 	$HTML = New-Object -Com "HTMLFile"
 	[string]$HtmlBody = $req.Content
 
@@ -169,22 +197,32 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			$zip = [IO.Compression.ZipFile]::OpenRead($Destination_File)
 			Try {
 				# Find specific file in Zip archive.
+				$zip.Entries.Name
+				Write-Host $Destination_File
+				
 				If ($Found_File = $zip.Entries.Where({ $_.Name -eq 'ScriptHookV.dll' }, 'First')) {
+					LogWrite "Found ScriptHookV.dll in Zip file."
 					# Set destination path of file to extract
-					$Destination_File = Join-Path $Game_Folder $Found_File.Name
+					$DLL_Destination_File = Join-Path $Game_Folder $Found_File.Name
 					
 					# Extract the file.
-					[IO.Compression.ZipFileExtensions]::ExtractToFile($Found_File[0], $Destination_File)
+					Try {
+						[IO.Compression.ZipFileExtensions]::ExtractToFile($Found_File[0], $DLL_Destination_File)
+					} Catch {
+						LogWrite "Could not unpack downloaded Zip file."
+					}
 				} Else {
 					LogWrite "Zip file does not seem to contain ScriptHookV.dll."
 				}
+			} Catch {
+				LogWrite "Could not unpack Zip archive."
 			} Finally {
 				# Close the Zip so the file will be unlocked again.
 				If ($zip) {
 					$zip.Dispose()
 				}
 			}
-			
+
 			Try {
 				# Delete zip file after unpacking DLL.
 				Remove-Item $Destination_File -Force

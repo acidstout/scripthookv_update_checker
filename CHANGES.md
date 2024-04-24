@@ -1,4 +1,7 @@
 ##Changelog
+1.2.4.2
+- Added function the check for and request elevated access rights, because the GTA V game folder is restricted by default.
+
 1.2.4.1
 - Added support for ntfy.sh to send push messages upon successful update.
 
