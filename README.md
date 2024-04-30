@@ -13,7 +13,7 @@ Checks the installed version of the ScriptHookV plugin against the latest versio
 This script could have been cleaner and nicer from a code perspective, but I wanted a fast, reliable, portable single-file solution without many dependencies. So, the script tries to do as much as possible itself. You should not need to modify it in order to make it work for you, but keep in mind that although it works totally fine for me, it might not work for you at all, or it might even destroy something. So, use this on your own risk.
 
 ## Dependencies
-Tested successfully with PowerShell 7. It might run with a version PowerShell lower than 7.0, but that hasn't been tested.
+Tested successfully with PowerShell 7. It might run with a version of PowerShell lower than 7.0, but that hasn't been tested. Also, for your own sake use an up-to-date version of PowerShell.
 
 ## Usage
 1. Optionally set up you e-mail configuration in ScriptHookV_Updater_sample.ps1 and rename it to ScriptHookV_Updater_config.ps1
@@ -24,10 +24,16 @@ Tested successfully with PowerShell 7. It might run with a version PowerShell lo
 Use Windows' Task Scheduler and create a new task running once per day (preferably at night), and let it run this command:
 
 ```
-pwsh ScriptHookV_Updater.ps1
+pwsh -WindowStyle hidden -File .\ScriptHookV_Updater.ps1
 ```
 
-You will likely need to add the proper paths to the command, but basically it's just that. Save the task and you're good to go. Please don't hammer Alexander's website by constantly checking for a new version. Once per day is more than enough.
+You may also use this command on an elevated prompt to have the task created for you:
+
+```
+schtasks /create /sc daily /st 16:00 /ru system /rl highest /tn "Check for ScriptHookV plugin update" /tr "'C:\Program Files\PowerShell\7\pwsh.exe' -WindowStyle hidden -File .\ScriptHookV_Updater.ps1"
+```
+
+You will likely need to add/modify proper paths to the command, but basically it's just that. Save the task and you're good to go. Please don't hammer Alexander's website by constantly checking for a new version. Once per day is more than enough.
 
 ## Known issues
-Since the game is updated automatically by the Rockstar Launcher only when you start the game, the ScriptHookV Update Checker is not able to notice these updates unless you run it directly after the Launcher updated the game and prior you start the actual game. There's no way for this script to work around this issue, and permanently monitoring file system changes in the game's folder is not cool. A different solution is if Alexander Blade adds automatic update capability to his plugin if it is outdated. So, instead of showing a message that the plugin is outdated and then quitting the game, he could make the plugin to check for an update, and if none is available, then just load the game without hooking to the game. From my perspective this is the best solution. Unfortunately, the source code of his plugin is not open source, so I cannot implement it myself. What a shame!
+Since the game is updated automatically by the Rockstar Launcher only when you start the game, the ScriptHookV Updater is not able to notice these updates unless you run it directly after the Launcher updated the game and prior you start the actual game. There's no way for this script to work around this issue, and permanently monitoring file system changes in the game's folder is not cool. A different solution is if Alexander Blade adds automatic update capability to his plugin if it is outdated. So, instead of showing a message that the plugin is outdated and then quitting the game, he could make the plugin to check for an update, and if none is available, then just load the game without hooking to the game. From my perspective this is the best solution. Unfortunately, the source code of his plugin is not open source, so I cannot implement it myself. What a shame!

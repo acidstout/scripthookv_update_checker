@@ -4,7 +4,7 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.2
+# @version: 1.2.4.3
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -12,35 +12,8 @@
 
 param([switch]$elevated)
 
-# If TRUE no output will be printed. Instead errors will be logged into a file.
-$script:QuietMode = $true
-
-# Change folder to game directory, because elevation changes folder to C:\Windows\System32 by default, which we don't want.
+# Change folder to script directory, because elevation changes folder to C:\Windows\System32 by default, which we don't want.
 Set-Location -LiteralPath $PSScriptRoot
-
-# Check if we have elevated access rights.
-If ((Test-Admin) -eq $false)  {
-    If ($elevated) {
-        # Tried to elevate, did not work, aborting.
-		LogWrite "Could not elevate access rights."
-    } Else {
-        Start-Process powershell.exe -WindowStyle hidden -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    }
-    Exit
-}
-
-# Check if mail server configuration exists and load it.
-$ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
-If ([System.IO.File]::Exists($ConfigFile)) {
-	. $ConfigFile
-} Else {
-	# Do not try to send mails upon success.
-	$script:UseMail = $false
-	$script:NotifyURL = $false
-}
-
-Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
-Add-Type -Assembly System.IO.Compression.FileSystem
 
 
 # Check if we have elevated access rights.
@@ -60,7 +33,7 @@ Function Test-Admin {
 #
 Function LogWrite {
 	# Get parameter from function call.
-	Param ([string]$Log_String)
+	param([string]$Log_String)
 
 	# Get location and name of current script.
 	$Script_Name = (Get-Item $PSCommandPath).Basename
@@ -93,6 +66,31 @@ Function Send-ToEmail([string]$version) {
     LogWrite "Mail sent." 
 }
 
+
+# Check if we have elevated access rights.
+If ((Test-Admin) -eq $false)  {
+    If ($elevated) {
+        # Tried to elevate, did not work, aborting.
+		LogWrite "Could not elevate access rights."
+    } Else {
+        Start-Process powershell.exe -WindowStyle hidden -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+    }
+    Exit
+}
+
+# Check if mail server configuration exists and load it.
+$ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
+If ([System.IO.File]::Exists($ConfigFile)) {
+	. $ConfigFile
+} Else {
+	# Fallback values if not config file has been set up.
+	$script:QuietMode = $true
+	$script:UseMail = $false
+	$script:NotifyURL = $false
+}
+
+Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
+Add-Type -Assembly System.IO.Compression.FileSystem
 
 # Get location from registry where GTA V is installed.
 Try {

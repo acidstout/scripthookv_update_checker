@@ -1,4 +1,10 @@
-##Changelog
+#Changelog
+1.2.4.3
+- Updated config file to support all configuration options.
+- Updated order of functions, because PowerShell does not seem to find functions which are defined some lines below the actual invocation of that function.
+- Updated README.md file.
+- Changed license from GNUv3 to MIT.
+
 1.2.4.2
 - Added function the check for and request elevated access rights, because the GTA V game folder is restricted by default.
 
