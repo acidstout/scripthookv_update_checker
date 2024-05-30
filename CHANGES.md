@@ -1,4 +1,7 @@
 #Changelog
+1.2.4.4
+- Disable mail in config sample by default to reflect fallback settings in script.
+
 1.2.4.3
 - Updated config file to support all configuration options.
 - Updated order of functions, because PowerShell does not seem to find functions which are defined some lines below the actual invocation of that function.

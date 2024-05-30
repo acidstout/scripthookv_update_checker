@@ -4,7 +4,7 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.3
+# @version: 1.2.4.4
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -78,7 +78,7 @@ If ((Test-Admin) -eq $false)  {
     Exit
 }
 
-# Check if mail server configuration exists and load it.
+# Check if configuration file exists and load it.
 $ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
 If ([System.IO.File]::Exists($ConfigFile)) {
 	. $ConfigFile
@@ -104,7 +104,7 @@ Try {
 $ScriptHookV_Version = '0.0'
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
-$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 $Headers = @{
 	'Referer' = $ScriptHookV_URL
 	'User-Agent' = $User_Agent

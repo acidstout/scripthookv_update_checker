@@ -2,7 +2,7 @@
 $script:QuietMode = $true
 
 # Optional. If TRUE, mail configuration below needs to be set up.
-$script:UseMail = $true
+$script:UseMail = $false
 $script:MailRecipient = "recipient@example.com"
 $script:MailUsername = "sender@example.com"
 $script:MailPassword = "secret"
