@@ -73,10 +73,13 @@ If ((Test-Admin) -eq $false)  {
         # Tried to elevate, did not work, aborting.
 		LogWrite "Could not elevate access rights."
     } Else {
-        Start-Process powershell.exe -WindowStyle hidden -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+    	LogWrite "Trying to elevate access rights."
+        Start-Process 'C:\Program Files\PowerShell\7\pwsh.exe' -WindowStyle hidden -Verb RunAs -ArgumentList ('-noprofile -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
     }
     Exit
 }
+
+LogWrite "Got elevated access rights."
 
 # Check if configuration file exists and load it.
 $ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
