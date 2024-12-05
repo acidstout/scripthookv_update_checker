@@ -4,7 +4,7 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.4
+# @version: 1.2.4.5
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -18,7 +18,7 @@ Set-Location -LiteralPath $PSScriptRoot
 
 # Check if we have elevated access rights.
 #
-# Return boolean
+# Return Boolean
 #
 Function Test-Admin {
     $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -31,10 +31,7 @@ Function Test-Admin {
 #
 # Param String $logstring
 #
-Function LogWrite {
-	# Get parameter from function call.
-	param([string]$Log_String)
-
+Function LogWrite([string]$Log_String) {
 	# Get location and name of current script.
 	$Script_Name = (Get-Item $PSCommandPath).Basename
 	$Script_Log = "$PSScriptRoot\$Script_Name.log"
@@ -64,6 +61,72 @@ Function Send-ToEmail([string]$version) {
     $smtp.Credentials = New-Object System.Net.NetworkCredential($script:MailUsername, $script:MailPassword)
     $smtp.send($message)
     LogWrite "Mail sent." 
+}
+
+
+# Gets latest user-agent of installed standard browsers.
+#
+# Return String
+#  
+Function Get-UserAgent() {
+	# Fallback User-Agent.
+	$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+	
+	# Try to get version of installed browser in order to set up-to-date User-Agent.
+	# Check for Edge
+	$Edge_Version = '0.0'
+	$Edge_Exe = Get-ItemPropertyValue 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe' "(default)"
+	if (Test-Path $Edge_Exe) {
+		$Edge_Version = (Get-Item $Edge_Exe).VersionInfo.ProductVersion
+		$Edge_Agent = -join('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/', $Edge_Version, ' Safari/537.36 Edg/', $Edge_Version)
+	}
+	
+	# Check for Chrome
+	$Chrome_Version = '0.0'
+	$Chrome_Exe = Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Microsoft\Windows\\CurrentVersion\\App Paths\\chrome.exe' -Name '(default)'
+	if (Test-Path $Chrome_Exe) {
+		$Chrome_Version = (Get-Item $Chrome_Exe).VersionInfo.ProductVersion
+		$Chrome_Agent = -join('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/', $Chrome_Version, ' Safari/537.36')
+	}
+	
+	# Check for Firefox
+	$Firefox_Version = '0.0'
+	$Firefox_Registry_Path = 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe'
+	if (Test-Path $Firefox_Registry_Path) {
+		$Firefox_Exe = Get-ItemPropertyValue -Path $Firefox_Registry_Path -Name '(default)'
+		if (Test-Path $Firefox_Exe) {
+			$Firefox_Version = (Get-Item $Firefox_Exe).VersionInfo.ProductVersion
+			$Firefox_Agent = -join('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:', $Firefox_Version, ') Gecko/20100101 Firefox/', $Firefox_Version)
+		}
+	}
+	
+	# Keep note of found browsers and versions in a hashtable.
+	$Browser_Versions = @{'Edge'=$Edge_Version; 'Chrome'=$Chrome_Version; 'Firefox'=$Firefox_Version}
+	
+	# PowerShell does not allow sorting hashtables by value, so we need to work around this issue.
+	# Define temporary values. Those variables will contain the name and version of the browser with the highest version.
+	$TempVersion = '0.0'
+	$TempName = ''
+	
+	# Iterate over our hashtable.
+	foreach ($key in $Browser_Versions.GetEnumerator()) {
+		# Compare temporary version with current version.
+		if ($TempVersion -lt $($key.Value)) {
+			# Set temporary name and version accordingly.
+			$TempName = $($key.Name)
+			$TempVersion = $($key.Value)
+		}
+	}
+	
+	# Build the name of our variable which hold the appropriate user-agent.
+	$TempName = -join($TempName, '_Agent')
+	
+	# Set our User-Agent to the respective value if we received a proper version number.
+	if ($TempVersion -ne '0.0') {
+		$User_Agent = (Get-Variable -name $TempName).Value
+	}
+
+	return $User_Agetnt
 }
 
 
@@ -107,7 +170,10 @@ Try {
 $ScriptHookV_Version = '0.0'
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
 $ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
-$User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+
+# Get latest user-agent from installed standard browsers.
+$User_Agent = Get-UserAgent()
+
 $Headers = @{
 	'Referer' = $ScriptHookV_URL
 	'User-Agent' = $User_Agent

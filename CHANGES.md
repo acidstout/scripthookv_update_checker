@@ -1,4 +1,7 @@
 #Changelog
+1.2.4.5
+- Get latest version of installed standard browsers and set highest version in User-Agent string.
+
 1.2.4.4
 - Disable mail in config sample by default to reflect fallback settings in script.
 
