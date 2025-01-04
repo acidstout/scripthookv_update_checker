@@ -1,4 +1,8 @@
 #Changelog
+
+1.2.4.6
+- Added support for BattlEye anti-cheat crap.
+
 1.2.4.5
 - Get latest version of installed standard browsers and set highest version in User-Agent string.
 

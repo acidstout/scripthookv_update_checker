@@ -4,7 +4,7 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.5
+# @version: 1.2.4.6
 #
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
@@ -281,6 +281,24 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 				} Else {
 					LogWrite "Zip file does not seem to contain ScriptHookV.dll."
 				}
+				
+				# Also check if args.txt is in Zip file and extract it, too.
+				# It's needed to get rid of BattlEye anti-cheat crap.
+				If ($Found_File = $zip.Entries.Where({ $_.Name -eq 'args.txt' }, 'First')) {
+					LogWrite "Found args.txt in Zip file."
+					# Set destination path of file to extract
+					$TXT_Destination_File = Join-Path $Game_Folder $Found_File.Name
+					
+					# Extract the file.
+					Try {
+						[IO.Compression.ZipFileExtensions]::ExtractToFile($Found_File[0], $TXT_Destination_File)
+					} Catch {
+						LogWrite "Could not unpack downloaded Zip file."
+					}
+				} Else {
+					LogWrite "Zip file does not seem to contain ScriptHookV.dll."
+				}
+				
 			} Catch {
 				LogWrite "Could not unpack Zip archive."
 			} Finally {
