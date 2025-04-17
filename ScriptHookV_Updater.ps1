@@ -4,8 +4,10 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.4.6
+# @version: 1.2.5
 #
+
+# TODO: Fix changed URL of download.
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
@@ -144,6 +146,9 @@ If ((Test-Admin) -eq $false)  {
 
 LogWrite "Got elevated access rights."
 
+Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
+Add-Type -Assembly System.IO.Compression.FileSystem
+
 # Check if configuration file exists and load it.
 $ConfigFile = "$PSScriptRoot\$((Get-Item $PSCommandPath).Basename)_config.ps1"
 If ([System.IO.File]::Exists($ConfigFile)) {
@@ -154,9 +159,6 @@ If ([System.IO.File]::Exists($ConfigFile)) {
 	$script:UseMail = $false
 	$script:NotifyURL = $false
 }
-
-Add-Type -AssemblyName Microsoft.PowerShell.Commands.Utility
-Add-Type -Assembly System.IO.Compression.FileSystem
 
 # Get location from registry where GTA V is installed.
 Try {
@@ -169,10 +171,13 @@ Try {
 # Set ScriptHookV URLs and define fallback version for cases where ScriptHookV is not installed.
 $ScriptHookV_Version = '0.0'
 $ScriptHookV_URL = 'http://www.dev-c.com/gtav/scripthookv/'
-$ScriptHookV_Download_URL = 'http://www.dev-c.com/files/ScriptHookV_<VERSION>.zip'
+$ScriptHookV_Download_URL = 'https://ntscorp.ru/dev-c/ScriptHookV_<VERSION>.zip'
+
+# Flag to decided which game version is installed.
+$IsEnhancedVersion = $false
 
 # Get latest user-agent from installed standard browsers.
-$User_Agent = Get-UserAgent()
+$User_Agent = Get-UserAgent
 
 $Headers = @{
 	'Referer' = $ScriptHookV_URL
@@ -183,6 +188,14 @@ $Headers = @{
 If ([System.IO.File]::Exists($Game_Folder + '\ScriptHookV.dll')) {
 	Try {
 		$ScriptHookV_Version = (Get-Item ($Game_Folder + '\ScriptHookV.dll')).VersionInfo.FileVersion
+		$v = [version]$ScriptHookV_Version
+		$ScriptHookV_Version_Classic = "$($v.Major).$($v.Minor)"
+		$ScriptHookV_Version_Enhanced = $ScriptHookV_Version.substring($ScriptHookV_Version_Classic.Length + 1)
+		$ScriptHookV_Version_Classic = "1.0.$ScriptHookV_Version_Classic" 
+		$ScriptHookV_Version_Enhanced = "1.0.$ScriptHookV_Version_Enhanced" 
+		# $ScriptHookV_Version_Classic
+		# $ScriptHookV_Version_Enhanced
+		# $ScriptHookV_Version
 	} Catch {
 		# ScriptHookV plugin is not installed.
 		LogWrite 'Could not read version from ScriptHookV.dll file. Using fallback version.'
@@ -191,11 +204,24 @@ If ([System.IO.File]::Exists($Game_Folder + '\ScriptHookV.dll')) {
 }
 
 # Get installed game version.
-Try {
-	$Game_Version = (Get-Item ($Game_Folder + '\GTA5.exe')).VersionInfo.FileVersion
-} Catch {
-	LogWrite "Could not find GTA5.exe in folder $Game_Folder."
-	Exit
+If ([System.IO.File]::Exists($Game_Folder + '\GTA5.exe')) {
+	Try {
+		$Game_Version = (Get-Item ($Game_Folder + '\GTA5.exe')).VersionInfo.FileVersion
+	} Catch {
+		LogWrite "Could not find GTA5.exe in folder $Game_Folder."
+		Exit
+	}
+}
+
+# Also check for GTA V Enhanced Edition.
+If ([System.IO.File]::Exists($Game_Folder + '\GTA5_Enhanced.exe')) {
+	Try {
+		$Game_Version = (Get-Item ($Game_Folder + '\GTA5_Enhanced.exe')).VersionInfo.FileVersion
+		$IsEnhancedVersion = $true
+	} Catch {
+		LogWrite "Could not find GTA5_Enhanced.exe in folder $Game_Folder."
+		Exit
+	}
 }
 
 # Get ScriptHookV version from website.
@@ -205,10 +231,15 @@ Try {
 	$HTML = New-Object -Com "HTMLFile"
 	[string]$HtmlBody = $req.Content
 
-	[void]($HtmlBody -match "\/files\/ScriptHookV_[0-9\.]+\.zip")
+	[void]($HtmlBody -match "\/dev-c\/ScriptHookV[0-9_\.]+\.zip")
 	$Link = $Matches[0]
 	$ScriptHookV_Remote_Version = $Link.Substring(19)
 	$ScriptHookV_Remote_Version = $ScriptHookV_Remote_Version.Substring(0, [int]$ScriptHookV_Remote_Version.IndexOf('.zip'))
+	$ScriptHookV_Remote_Version_Clean = $ScriptHookV_Remote_Version.Replace('_','.')
+	$ScriptHookV_Remote_Version_Classic = $ScriptHookV_Remote_Version.substring(0, $ScriptHookV_Remote_Version.indexOf('_'))
+	$ScriptHookV_Remote_Version_Enhanced = $ScriptHookV_Remote_Version.substring($ScriptHookV_Remote_Version.indexOf('_') + 1)
+	$ScriptHookV_Remote_Version_Classic = "1.0.$ScriptHookV_Remote_Version_Classic"
+	$ScriptHookV_Remote_Version_Enhanced = "1.0.$ScriptHookV_Remote_Version_Enhanced"
 } Catch {
 	LogWrite "Could not fetch latest ScriptHookV plugin version from website $ScriptHookV_URL."
 	Exit
@@ -218,11 +249,16 @@ Try {
 If ($script:QuietMode -eq $false) {
 	Write-Output "`r`nScriptHookV Update Checker`r`n"
 	Write-Output "Installed game version: $Game_Version"
-	Write-Output "Installed plugin version: $ScriptHookV_Version"
-	Write-Output "Latest plugin version: $ScriptHookV_Remote_Version`r`n"
+	If ($IsEnhancedVersion) {
+		Write-Output "Installed plugin version: $ScriptHookV_Version_Enhanced"
+		Write-Output "Latest plugin version: $ScriptHookV_Remote_Version_Enhanced`r`n"
+	} Else {
+		Write-Output "Installed plugin version: $ScriptHookV_Version_Classic"
+		Write-Output "Latest plugin version: $ScriptHookV_Remote_Version_Classic`r`n"
+	}
 }
 
-If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
+If ((!$IsEnhanced -and ([System.Version]$ScriptHookV_Version_Classic -lt [System.Version]$Game_Version)) -or ($IsEnhanced -and ([System.Version]$ScriptHookV_Version_Enhanced -lt [System.Version]$Game_Version))) {
 	# Installed ScriptHookV version is older than game version.
 	LogWrite "ScriptHookV is outdated or not installed."
 	
@@ -237,7 +273,7 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 		}
 	}
 	
-	If ([System.Version]$ScriptHookV_Remote_Version -ge [System.Version]$Game_Version) {
+	If ((!$IsEnhanced -and ([System.Version]$ScriptHookV_Remote_Version_Classic -ge [System.Version]$Game_Version)) -or ($IsEnhanced -and ([System.Version]$ScriptHookV_Remote_Version_Enhanced -ge [System.Version]$Game_Version))) {
 		# Remote version is newer or equal than game version.
 		$ScriptHookV_Download_URL =	$ScriptHookV_Download_URL.Replace('<VERSION>', $ScriptHookV_Remote_Version)
 		$Destination_File = ($Game_Folder + '\' + $(Split-Path -Path $ScriptHookV_Download_URL -Leaf))
@@ -264,8 +300,9 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			$zip = [IO.Compression.ZipFile]::OpenRead($Destination_File)
 			Try {
 				# Find specific file in Zip archive.
-				$zip.Entries.Name
-				Write-Host $Destination_File
+				# Show entries in Zip archive.
+				# $zip.Entries.Name
+				LogWrite $Destination_File
 				
 				If ($Found_File = $zip.Entries.Where({ $_.Name -eq 'ScriptHookV.dll' }, 'First')) {
 					LogWrite "Found ScriptHookV.dll in Zip file."
@@ -318,7 +355,7 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			If ($script:UseMail -eq $true) {
 				Try {
 					# Send mail to inform about latest update.
-					Send-ToEmail -version $ScriptHookV_Remote_Version
+					Send-ToEmail -version $ScriptHookV_Remote_Version_Clean
 				} Catch {
 					LogWrite "Could not send mail about update."
 				}
@@ -326,7 +363,7 @@ If ([System.Version]$ScriptHookV_Version -lt [System.Version]$Game_Version) {
 			
 			if ($script:NotifyURL -ne $false) {
 				Try {
-					$payload = "Latest ScriptHookV $ScriptHookV_Remote_Version has been successfully installed."
+					$payload = "Latest ScriptHookV $ScriptHookV_Remote_Version_Clean has been successfully installed."
 					$resp = Invoke-WebRequest -Method POST -Uri $script:NotifyURL -Body $payload
 					$Status_Code = $resp.StatusCode
 					LogWrite "Info $($Status_Code): Sent notfication."

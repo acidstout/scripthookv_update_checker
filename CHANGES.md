@@ -1,5 +1,11 @@
 #Changelog
 
+1.2.5
+- Added support for GTA V Enhanced.
+
+1.2.4.7
+- Moved imports to the top of the file.
+
 1.2.4.6
 - Added support for BattlEye anti-cheat crap.
 
