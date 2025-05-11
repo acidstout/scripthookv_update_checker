@@ -4,10 +4,8 @@
 # Requires PowerShell 7.
 #
 # @author: nrekow
-# @version: 1.2.5
+# @version: 1.2.5.1
 #
-
-# TODO: Fix changed URL of download.
 
 # Disable those red error messages in case of errors, because we use Try & Catch everywhere.
 # $ErrorActionPreference = "Stop"
@@ -17,6 +15,10 @@ param([switch]$elevated)
 # Change folder to script directory, because elevation changes folder to C:\Windows\System32 by default, which we don't want.
 Set-Location -LiteralPath $PSScriptRoot
 
+If ($PSVersionTable.PSVersion.Major -le 6) {
+	Write-Host "This script requires at least PowerShell 7."
+	Exit
+}
 
 # Check if we have elevated access rights.
 #
@@ -208,7 +210,7 @@ If ([System.IO.File]::Exists($Game_Folder + '\GTA5.exe')) {
 	Try {
 		$Game_Version = (Get-Item ($Game_Folder + '\GTA5.exe')).VersionInfo.FileVersion
 	} Catch {
-		LogWrite "Could not find GTA5.exe in folder $Game_Folder."
+		LogWrite "Could not access GTA5.exe in folder $Game_Folder."
 		Exit
 	}
 }
@@ -219,7 +221,7 @@ If ([System.IO.File]::Exists($Game_Folder + '\GTA5_Enhanced.exe')) {
 		$Game_Version = (Get-Item ($Game_Folder + '\GTA5_Enhanced.exe')).VersionInfo.FileVersion
 		$IsEnhancedVersion = $true
 	} Catch {
-		LogWrite "Could not find GTA5_Enhanced.exe in folder $Game_Folder."
+		LogWrite "Could not access GTA5_Enhanced.exe in folder $Game_Folder."
 		Exit
 	}
 }
@@ -257,6 +259,7 @@ If ($script:QuietMode -eq $false) {
 		Write-Output "Latest plugin version: $ScriptHookV_Remote_Version_Classic`r`n"
 	}
 }
+
 
 If ((!$IsEnhanced -and ([System.Version]$ScriptHookV_Version_Classic -lt [System.Version]$Game_Version)) -or ($IsEnhanced -and ([System.Version]$ScriptHookV_Version_Enhanced -lt [System.Version]$Game_Version))) {
 	# Installed ScriptHookV version is older than game version.

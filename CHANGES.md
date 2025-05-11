@@ -1,5 +1,8 @@
 #Changelog
 
+1.2.5.1
+- Added soft-check of PowerShell version.
+
 1.2.5
 - Added support for GTA V Enhanced.
 
